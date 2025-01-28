@@ -160,11 +160,11 @@ const forceMaxInput = document.getElementById('forceMax');
 
 
 const updateButton = document.getElementById('updateSim');
-updateButton.addEventListener('click', event => {
+updateButton.addEventListener('click', () => {
     targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
     World.remove(engine.world, indicator);
     indicator = Bodies.rectangle(targetPosition, 296, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
-    Composite.add(engine.world, indicator);
+    Composite.add(engine.world, [indicator]);
 
     // Speed control PID inputs
     const speedKp = parseFloat(speedKpInput.value);
@@ -204,18 +204,17 @@ updateButton.addEventListener('click', event => {
 
 const resetButton = document.getElementById('resetSim');
 resetButton.addEventListener('click', event => {
-    updateButton.click();
-
     event.preventDefault();
     World.clear(engine.world);
     Engine.clear(engine);
     Render.stop(render);
     Runner.stop(runner);
     
+    updateButton.click();
     targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
-    let indicator = Bodies.rectangle(targetPosition, 296, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
+    // We don't need to add the indicator here as it is added in updateButton.click()
     let ground = Bodies.rectangle(400, 590, 8000, 10, { isStatic: true, angle: 0 });
-    Composite.add(engine.world, [ground, indicator]);
+    Composite.add(engine.world, [ground]);
 
     startPosition = (parseFloat(startPositionSlider.value) / 100) * WIDTH;
     payload = Bodies.circle(startPosition, 330, 10);
@@ -228,7 +227,7 @@ resetButton.addEventListener('click', event => {
 });
 
 const setAcceptableValues = document.getElementById('setAcceptableValues');
-setAcceptableValues.addEventListener('click', event => {
+setAcceptableValues.addEventListener('click', () => {
     // Set acceptable values for the PID inputs
     speedKpInput.value = 5;
     speedKiInput.value = 0;
@@ -260,7 +259,7 @@ function applyForces(event) {
 
 Events.on(runner, 'afterUpdate', applyForces);
 
-function checkIndicator(event) {
+function checkIndicator() {
     if (Query.region([payload], indicator.bounds).includes(payload)) {
         indicator.render.strokeStyle = colorOut;
     } else {
