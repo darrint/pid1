@@ -274,11 +274,28 @@ function applyForces(event) {
 
 Events.on(runner, 'afterUpdate', applyForces);
 
+const shouldRandomizeCheckbox = document.getElementById("randomizeTarget")
+let setTheTimeout = false;
 function checkIndicator() {
     if (Query.region([payload], indicator.bounds).includes(payload)) {
-        indicator.render.strokeStyle = colorOut;
-    } else {
         indicator.render.strokeStyle = colorIn;
+        if(!setTheTimeout && shouldRandomizeCheckbox.checked){
+            setTheTimeout = true;
+            setTimeout(() => {
+                // Randomize the target position when reached
+                setTheTimeout = false;
+                if(!Query.region([payload], indicator.bounds).includes(payload))
+                    return;
+                let newTarget = Math.random() * 100
+                targetPositionSlider.value = newTarget;
+                targetPosition = ((newTarget / 100) * WIDTH);
+                World.remove(engine.world, indicator);
+                indicator = Bodies.rectangle(targetPosition, INDICATOR_LEVEL, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
+                Composite.add(engine.world, [indicator]);
+            }, 1000 + (Math.random() * 5000))
+        }
+    } else {
+        indicator.render.strokeStyle = colorOut;
     }
 }
 
