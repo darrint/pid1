@@ -139,17 +139,73 @@ class ControlPID {
     }
 }
 
-// TUNE HERE
-// const speedControl = new ControlPID(100, 5, 0, 3)
-// const angleControl = new ControlPID(30, 2, 0, 2)
-// const forceControl = new ControlPID(20, -0.01, 0, -0.01)
-
 const speedControl = new ControlPID(100, 0, 0, 0)
 const angleControl = new ControlPID(30, 0, 0, 0)
 const forceControl = new ControlPID(20, 0, 0, 0)
 
+const speedKpInput = document.getElementById('speedKp');
+const speedKiInput = document.getElementById('speedKi');
+const speedKdInput = document.getElementById('speedKd');
+const speedMaxInput = document.getElementById('speedMax');
+
+const angleKpInput = document.getElementById('angleKp');
+const angleKiInput = document.getElementById('angleKi');
+const angleKdInput = document.getElementById('angleKd');
+const angleMaxInput = document.getElementById('angleMax');
+
+const forceKpInput = document.getElementById('forceKp');
+const forceKiInput = document.getElementById('forceKi');
+const forceKdInput = document.getElementById('forceKd');
+const forceMaxInput = document.getElementById('forceMax');
+
+
+const updateButton = document.getElementById('updateSim');
+updateButton.addEventListener('click', event => {
+    targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
+    World.remove(engine.world, indicator);
+    indicator = Bodies.rectangle(targetPosition, 296, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
+    Composite.add(engine.world, indicator);
+
+    // Speed control PID inputs
+    const speedKp = parseFloat(speedKpInput.value);
+    const speedKi = parseFloat(speedKiInput.value);
+    const speedKd = parseFloat(speedKdInput.value);
+    const speedMax = parseFloat(speedMaxInput.value);
+
+    speedControl.setPIDWithMax(speedKp, speedKi, speedKd, speedMax);
+    speedControl.reset();
+
+    // Angle control PID inputs
+    const angleKpInput = document.getElementById('angleKp');
+    const angleKiInput = document.getElementById('angleKi');
+    const angleKdInput = document.getElementById('angleKd');
+    const angleMaxInput = document.getElementById('angleMax');
+    const angleKp = parseFloat(angleKpInput.value);
+    const angleKi = parseFloat(angleKiInput.value);
+    const angleKd = parseFloat(angleKdInput.value);
+    const angleMax = parseFloat(angleMaxInput.value);
+
+    angleControl.setPIDWithMax(angleKp, angleKi, angleKd, angleMax);
+    angleControl.reset();
+
+    // Force control PID inputs
+    const forceKpInput = document.getElementById('forceKp');
+    const forceKiInput = document.getElementById('forceKi');
+    const forceKdInput = document.getElementById('forceKd');
+    const forceMaxInput = document.getElementById('forceMax');
+    const forceKp = parseFloat(forceKpInput.value);
+    const forceKi = parseFloat(forceKiInput.value);
+    const forceKd = parseFloat(forceKdInput.value);
+    const forceMax = parseFloat(forceMaxInput.value);
+
+    forceControl.setPIDWithMax(forceKp, forceKi, forceKd, forceMax);
+    forceControl.reset();
+});
+
 const resetButton = document.getElementById('resetSim');
 resetButton.addEventListener('click', event => {
+    updateButton.click();
+
     event.preventDefault();
     World.clear(engine.world);
     Engine.clear(engine);
@@ -169,91 +225,29 @@ resetButton.addEventListener('click', event => {
     Composite.add(engine.world, [MouseConstraint.create(engine)])
     Render.run(render);
     Runner.run(runner, engine);
-
-    // Speed control PID inputs
-    const speedKpInput = document.getElementById('speedKp');
-    const speedKiInput = document.getElementById('speedKi');
-    const speedKdInput = document.getElementById('speedKd');
-    const speedMaxInput = document.getElementById('speedMax');
-    const speedKp = parseFloat(speedKpInput.value);
-    const speedKi = parseFloat(speedKiInput.value);
-    const speedKd = parseFloat(speedKdInput.value);
-    const speedMax = parseFloat(speedMaxInput.value);
-
-    speedControl.setPIDWithMax(speedKp, speedKi, speedKd, speedMax);
-    speedControl.reset();
-
-    // Angle control PID inputs
-    const angleKpInput = document.getElementById('angleKp');
-    const angleKiInput = document.getElementById('angleKi');
-    const angleKdInput = document.getElementById('angleKd');
-    const angleMaxInput = document.getElementById('angleMax');
-    const angleKp = parseFloat(angleKpInput.value);
-    const angleKi = parseFloat(angleKiInput.value);
-    const angleKd = parseFloat(angleKdInput.value);
-    const angleMax = parseFloat(angleMaxInput.value);
-
-    angleControl.setPIDWithMax(angleKp, angleKi, angleKd, angleMax);
-    angleControl.reset();
-
-    // Force control PID inputs
-    const forceKpInput = document.getElementById('forceKp');
-    const forceKiInput = document.getElementById('forceKi');
-    const forceKdInput = document.getElementById('forceKd');
-    const forceMaxInput = document.getElementById('forceMax');
-    const forceKp = parseFloat(forceKpInput.value);
-    const forceKi = parseFloat(forceKiInput.value);
-    const forceKd = parseFloat(forceKdInput.value);
-    const forceMax = parseFloat(forceMaxInput.value);
-
-    forceControl.setPIDWithMax(forceKp, forceKi, forceKd, forceMax);
-    forceControl.reset();
 });
 
-const updateButton = document.getElementById('updateSim');
-updateButton.addEventListener('click', event => {
-    targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
-    Body.setPosition(indicator, { x: targetPosition, y: indicator.position.y });
+const setAcceptableValues = document.getElementById('setAcceptableValues');
+setAcceptableValues.addEventListener('click', event => {
+    // Set acceptable values for the PID inputs
+    speedKpInput.value = 5;
+    speedKiInput.value = 0;
+    speedKdInput.value = 3;
+    speedMaxInput.value = 100;
 
-    // Speed control PID inputs
-    const speedKpInput = document.getElementById('speedKp');
-    const speedKiInput = document.getElementById('speedKi');
-    const speedKdInput = document.getElementById('speedKd');
-    const speedMaxInput = document.getElementById('speedMax');
-    const speedKp = parseFloat(speedKpInput.value);
-    const speedKi = parseFloat(speedKiInput.value);
-    const speedKd = parseFloat(speedKdInput.value);
-    const speedMax = parseFloat(speedMaxInput.value);
+    angleKpInput.value = 2;
+    angleKiInput.value = 0;
+    angleKdInput.value = 2;
+    angleMaxInput.value = 30;
 
-    speedControl.setPIDWithMax(speedKp, speedKi, speedKd, speedMax);
-    speedControl.reset();
+    forceKpInput.value = -0.01;
+    forceKiInput.value = 0;
+    forceKdInput.value = -0.01;
+    forceMaxInput.value = 20;
 
-    // Angle control PID inputs
-    const angleKpInput = document.getElementById('angleKp');
-    const angleKiInput = document.getElementById('angleKi');
-    const angleKdInput = document.getElementById('angleKd');
-    const angleMaxInput = document.getElementById('angleMax');
-    const angleKp = parseFloat(angleKpInput.value);
-    const angleKi = parseFloat(angleKiInput.value);
-    const angleKd = parseFloat(angleKdInput.value);
-    const angleMax = parseFloat(angleMaxInput.value);
-
-    angleControl.setPIDWithMax(angleKp, angleKi, angleKd, angleMax);
-    angleControl.reset();
-
-    // Force control PID inputs
-    const forceKpInput = document.getElementById('forceKp');
-    const forceKiInput = document.getElementById('forceKi');
-    const forceKdInput = document.getElementById('forceKd');
-    const forceMaxInput = document.getElementById('forceMax');
-    const forceKp = parseFloat(forceKpInput.value);
-    const forceKi = parseFloat(forceKiInput.value);
-    const forceKd = parseFloat(forceKdInput.value);
-    const forceMax = parseFloat(forceMaxInput.value);
-
-    forceControl.setPIDWithMax(forceKp, forceKi, forceKd, forceMax);
-    forceControl.reset();
-});
+    // Trigger the reset button to reset the simulation
+    resetButton.click();
+})
 
 function applyForces(event) {
     const delta = event.source.delta;
