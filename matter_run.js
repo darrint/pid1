@@ -13,6 +13,12 @@ const Engine = Matter.Engine,
     World = Matter.World;
 
 const WIDTH = window.innerWidth;
+const HEIGHT = 300;
+const GROUND_LEVEL = HEIGHT;
+const INDICATOR_LEVEL = GROUND_LEVEL - 200;
+const PAYLOAD_HEIGHT = INDICATOR_LEVEL + 25;
+const WHEEL_SIZE = 40;
+const WHEEL_HEIGHT = GROUND_LEVEL - (WHEEL_SIZE / 2);
 
 const engine = Engine.create();
 
@@ -21,8 +27,7 @@ const render = Render.create({
     engine: engine,
     options: {
         width: WIDTH,
-        height: 800,
-        // showAngleIndicator: true,
+        height: HEIGHT,
         showBounds: true,
         showPositions: false,
         showSleeping: true,
@@ -30,30 +35,24 @@ const render = Render.create({
     },
 });
 
-// create two boxes and a ground
-// const boxA = Bodies.rectangle(50, 200, 80, 80);
-// const boxB = Bodies.rectangle(750, 50, 80, 80);
-// Composite.add(engine.world, [boxA, boxB]);
-
 const startPositionSlider = document.getElementById('startPosition');
 let startPosition = (parseFloat(startPositionSlider.value) / 100) * WIDTH;
 
 const targetPositionSlider = document.getElementById('targetPosition');
 let targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
 
-const colorIn = '#f55a3c'
-const colorOut = '#f5d259'
-let indicator = Bodies.rectangle(targetPosition, 296, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
-let ground = Bodies.rectangle(400, 590, 8000, 10, { isStatic: true, angle: 0 });
+const colorIn = '#f55a3c';
+const colorOut = '#f5d259';
+let indicator = Bodies.rectangle(targetPosition, INDICATOR_LEVEL, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
+let ground = Bodies.rectangle(400, GROUND_LEVEL, 8000, 10, { isStatic: true, angle: 0 });
 Composite.add(engine.world, [ground, indicator]);
 
 // for (let i = 0; i < 50; i++) {
 //     Composite.add(engine.world, [Bodies.rectangle(Common.random(100, 900), Common.random(300, 350), Common.random(3, 10), Common.random(3, 10), { friction: 0.4 })])
 // }
 
-let payload = Bodies.circle(startPosition, 330, 10);
-// Body.setMass(payload, 1)
-let wheel = Bodies.circle(startPosition, 580, 40, { friction: 0.4, render: { sprite: { texture: 'assets/Stormcloud_Wheel.svg', xScale: 0.5, yScale: 0.5 } } });
+let payload = Bodies.circle(startPosition, PAYLOAD_HEIGHT, 10);
+let wheel = Bodies.circle(startPosition, WHEEL_HEIGHT, WHEEL_SIZE, { friction: 0.4, render: { sprite: { texture: 'assets/Stormcloud_Wheel.svg', xScale: 0.5, yScale: 0.5 } } });
 let join = Constraint.create({ bodyA: wheel, bodyB: payload, stiffness: 0.05, damping: 0.2 });
 Composite.add(engine.world, [payload, wheel, join]);
 
@@ -89,6 +88,7 @@ class ControlPID {
         this.kd = kd;
         this.prevError = null;
         this.accError = 0;
+        this.lastOutput = 0;
     }
 
     reset() {
@@ -135,6 +135,7 @@ class ControlPID {
         let output = this.kp * p + this.ki * i + this.kd * d;
         output = clamp(this.max, output)
         this.prevError = error;
+        this.lastOutput = output;
         return output;
     }
 }
@@ -163,7 +164,7 @@ const updateButton = document.getElementById('updateSim');
 updateButton.addEventListener('click', () => {
     targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
     World.remove(engine.world, indicator);
-    indicator = Bodies.rectangle(targetPosition, 296, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
+    indicator = Bodies.rectangle(targetPosition, INDICATOR_LEVEL, 15, 15, { isStatic: true, isSensor: true, render: { strokeStyle: colorOut, fillStyle: 'transparent', lineWidth: 2 } });
     Composite.add(engine.world, [indicator]);
 
     // Speed control PID inputs
@@ -213,17 +214,31 @@ resetButton.addEventListener('click', event => {
     updateButton.click();
     targetPosition = (parseFloat(targetPositionSlider.value) / 100) * WIDTH;
     // We don't need to add the indicator here as it is added in updateButton.click()
-    let ground = Bodies.rectangle(400, 590, 8000, 10, { isStatic: true, angle: 0 });
+    let ground = Bodies.rectangle(400, GROUND_LEVEL, 8000, 10, { isStatic: true, angle: 0 });
     Composite.add(engine.world, [ground]);
 
     startPosition = (parseFloat(startPositionSlider.value) / 100) * WIDTH;
-    payload = Bodies.circle(startPosition, 330, 10);
-    wheel = Bodies.circle(startPosition, 580, 40, { friction: 0.4, render: { sprite: { texture: 'assets/Stormcloud_Wheel.svg', xScale: 0.5, yScale: 0.5 } } });
+    payload = Bodies.circle(startPosition, PAYLOAD_HEIGHT, 10);
+    wheel = Bodies.circle(startPosition, WHEEL_HEIGHT, WHEEL_SIZE, { friction: 0.4, render: { sprite: { texture: 'assets/Stormcloud_Wheel.svg', xScale: 0.5, yScale: 0.5 } } });
     join = Constraint.create({ bodyA: wheel, bodyB: payload, stiffness: 0.05, damping: 0.2 });
     Composite.add(engine.world, [payload, wheel, join]);
     Composite.add(engine.world, [MouseConstraint.create(engine)])
     Render.run(render);
     Runner.run(runner, engine);
+
+    // Clear the graph data
+    positionGraphData.labels = [];
+    positionGraphData.datasets.forEach(dataset => {
+        dataset.data = [];
+    });
+    positionGraph.update();
+
+    // Clear the graph data
+    pidGraphData.labels = [];
+    pidGraphData.datasets.forEach(dataset => {
+        dataset.data = [];
+    });
+    pidGraph.update();
 });
 
 const setAcceptableValues = document.getElementById('setAcceptableValues');
@@ -266,6 +281,167 @@ function checkIndicator() {
         indicator.render.strokeStyle = colorIn;
     }
 }
+
+const graphContainer = document.createElement('div');
+graphContainer.id = 'graphContainer';
+document.body.appendChild(graphContainer);
+
+
+
+const positionGraphCheckbox = document.createElement('input');
+positionGraphCheckbox.type = 'checkbox';
+positionGraphCheckbox.id = 'chart1Checkbox';
+positionGraphCheckbox.checked = true;
+const positionGraphLabel = document.createElement('label');
+positionGraphLabel.htmlFor = 'chart1Checkbox';
+positionGraphLabel.appendChild(document.createTextNode('Enable Position Graph'));
+graphContainer.appendChild(positionGraphCheckbox);
+graphContainer.appendChild(positionGraphLabel);
+
+const pidGraphCheckbox = document.createElement('input');
+pidGraphCheckbox.type = 'checkbox';
+pidGraphCheckbox.id = 'chart2Checkbox';
+pidGraphCheckbox.checked = true;
+const pidGraphLabel = document.createElement('label');
+pidGraphLabel.htmlFor = 'chart2Checkbox';
+pidGraphLabel.appendChild(document.createTextNode('Enable PID Graph'));
+graphContainer.appendChild(pidGraphCheckbox);
+graphContainer.appendChild(pidGraphLabel);
+
+const positionGraphCanvas = document.createElement('canvas');
+positionGraphCanvas.id = 'graphCanvas';
+graphContainer.appendChild(positionGraphCanvas);
+
+const positionGraphCTX = positionGraphCanvas.getContext('2d');
+positionGraphCanvas.width = 800;
+positionGraphCanvas.height = 200;
+
+const positionGraphData = {
+    labels: [],
+    datasets: [
+        {
+            label: 'Target Position',
+            borderColor: 'red',
+            data: [],
+            fill: false,
+        },
+        {
+            label: 'Current Position',
+            borderColor: 'blue',
+            data: [],
+            fill: false,
+        },
+        {
+            label: 'Error',
+            borderColor: 'green',
+            data: [],
+            fill: false,
+        },
+    ],
+};
+
+const positionConfig = {
+    type: 'line',
+    data: positionGraphData,
+    options: {
+        scales: {
+            x: {
+                type: 'linear',
+                position: 'bottom',
+            },
+        },
+    },
+};
+
+const positionGraph = new Chart(positionGraphCTX, positionConfig);
+
+const pidGraphCanvas = document.createElement('canvas');
+pidGraphCanvas.id = 'graphCanvas2';
+graphContainer.appendChild(pidGraphCanvas);
+
+const pidCTX = pidGraphCanvas.getContext('2d');
+pidGraphCanvas.width = 800;
+pidGraphCanvas.height = 200;
+
+const pidGraphData = {
+    labels: [],
+    datasets: [
+        {
+            label: 'Speed',
+            borderColor: 'yellow',
+            data: [],
+            fill: false,
+        },
+        {
+            label: 'Angle',
+            borderColor: 'purple',
+            data: [],
+            fill: false,
+        },
+        {
+            label: 'Force',
+            borderColor: 'orange',
+            data: [],
+            fill: false,
+        },
+    ],
+};
+
+const pidGraphConfig = {
+    type: 'line',
+    data: pidGraphData,
+    options: {
+        scales: {
+            x: {
+                type: 'linear',
+                position: 'bottom',
+            },
+        },
+    },
+};
+
+const pidGraph = new Chart(pidCTX, pidGraphConfig);
+
+let startTime = Date.now();
+let lastUpdateTime = 0;
+const updateInterval = 100; // Update every 100ms
+
+function updateGraph() {
+    const currentTime = (Date.now() - startTime) / 1000;
+    if (currentTime - lastUpdateTime >= updateInterval / 1000) {
+        const scaledCurrentPosition = (payload.position.x / WIDTH) * 100;
+        const scaledTargetPosition = (targetPosition / WIDTH) * 100;
+        const error = scaledTargetPosition - scaledCurrentPosition;
+
+        positionGraphData.labels.push(currentTime);
+        positionGraphData.datasets[0].data.push({ x: currentTime, y: scaledTargetPosition });
+        positionGraphData.datasets[1].data.push({ x: currentTime, y: scaledCurrentPosition });
+        positionGraphData.datasets[2].data.push({ x: currentTime, y: error });
+        positionGraph.update();
+
+        pidGraphData.labels.push(currentTime);
+        pidGraphData.datasets[0].data.push({ x: currentTime, y: speedControl.lastOutput });
+        pidGraphData.datasets[1].data.push({ x: currentTime, y: angleControl.lastOutput });
+        pidGraphData.datasets[2].data.push({ x: currentTime, y: forceControl.lastOutput });
+        pidGraph.update();
+
+        if (positionGraphCheckbox.checked) {
+            positionGraphCanvas.style.display = 'block';
+        } else {
+            positionGraphCanvas.style.display = 'none';
+        }
+
+        if (pidGraphCheckbox.checked) {
+            pidGraphCanvas.style.display = 'block';
+        } else {
+            pidGraphCanvas.style.display = 'none';
+        }
+
+        lastUpdateTime = currentTime;
+    }
+}
+
+Events.on(runner, 'afterUpdate', updateGraph);
 
 Events.on(runner, 'afterUpdate', checkIndicator);
 
